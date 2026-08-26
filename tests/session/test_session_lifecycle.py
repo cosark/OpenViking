@@ -158,15 +158,16 @@ class TestSessionExists:
 
     async def test_session_exists_skips_directory_vector_count(self):
         session = Session.__new__(Session)
-        session._viking_fs = SimpleNamespace(stat=AsyncMock(return_value={"isDir": True}))
+        session._viking_fs = SimpleNamespace(
+            stat_metadata=AsyncMock(return_value={"isDir": True})
+        )
         session._session_uri = "viking://user/alice/sessions/session-1"
         session.ctx = SimpleNamespace()
 
         assert await session.exists() is True
-        session._viking_fs.stat.assert_awaited_once_with(
+        session._viking_fs.stat_metadata.assert_awaited_once_with(
             session._session_uri,
             ctx=session.ctx,
-            skip_count=True,
         )
 
     async def test_session_exists_true_after_create(

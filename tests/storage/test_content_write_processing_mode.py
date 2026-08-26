@@ -50,14 +50,13 @@ class _FakeVikingFS:
 @pytest.mark.asyncio
 async def test_content_write_stat_skips_directory_vector_count(ctx):
     fake_fs = _FakeVikingFS()
-    fake_fs.stat = AsyncMock(return_value={"isDir": True})
+    fake_fs.stat_metadata = AsyncMock(return_value={"isDir": True})
     coordinator = ContentWriteCoordinator(viking_fs=fake_fs)
 
     assert await coordinator._safe_stat("viking://resources/demo", ctx=ctx) == {"isDir": True}
-    fake_fs.stat.assert_awaited_once_with(
+    fake_fs.stat_metadata.assert_awaited_once_with(
         "viking://resources/demo",
         ctx=ctx,
-        skip_count=True,
     )
 
 

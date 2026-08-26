@@ -464,9 +464,8 @@ class _FakeVikingFS:
         self.tree_entries = []
         self._async_agfs = _FakePathLock()
 
-    async def stat(self, uri: str, ctx=None, skip_count=False):
+    async def stat_metadata(self, uri: str, ctx=None):
         del ctx
-        assert skip_count is True
         if uri == self._file_uri or uri in self.content:
             return {"isDir": False}
         if uri == self._root_uri:
@@ -876,9 +875,8 @@ class _FakeVikingFSForCreate:
         self.existing_dirs = set({root_uri} if existing_dirs is None else existing_dirs)
         self._async_agfs = _FakePathLock()
 
-    async def stat(self, uri: str, ctx=None, skip_count=False):
+    async def stat_metadata(self, uri: str, ctx=None):
         del ctx
-        assert skip_count is True
         if uri == self._file_uri:
             if self._file_exists:
                 return {"isDir": False}
@@ -1220,9 +1218,8 @@ class _AnyDirVikingFS:
     def __init__(self, file_uri: str):
         self._file_uri = file_uri
 
-    async def stat(self, uri: str, ctx=None, skip_count=False):
+    async def stat_metadata(self, uri: str, ctx=None):
         del ctx
-        assert skip_count is True
         return {"isDir": uri != self._file_uri}
 
 

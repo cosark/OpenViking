@@ -941,7 +941,7 @@ async def test_connector_watch_keeps_running_when_target_is_missing():
     from openviking_cli.exceptions import NotFoundError
 
     class MissingTargetFS:
-        async def stat(self, uri, ctx=None):
+        async def stat_metadata(self, uri, ctx=None):
             raise NotFoundError(uri, "resource")
 
     service = ResourceService()

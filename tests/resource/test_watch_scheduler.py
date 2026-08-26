@@ -136,8 +136,7 @@ class TestWatchSchedulerResourceExistence:
         from openviking_cli.exceptions import NotFoundError
 
         class FakeVikingFS:
-            async def stat(self, uri, ctx=None, skip_count=False):
-                assert skip_count is True
+            async def stat_metadata(self, uri, ctx=None):
                 raise NotFoundError(uri, "resource")
 
         class FakeResourceService(ResourceService):
@@ -178,8 +177,7 @@ class TestWatchSchedulerResourceExistence:
     @pytest.mark.asyncio
     async def test_target_uri_check_error_does_not_deactivate_task(self, tmp_path):
         class FakeVikingFS:
-            async def stat(self, uri, ctx=None, skip_count=False):
-                assert skip_count is True
+            async def stat_metadata(self, uri, ctx=None):
                 raise RuntimeError("temporary stat failure")
 
         class FakeResourceService(ResourceService):

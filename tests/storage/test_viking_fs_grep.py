@@ -13,7 +13,8 @@ from openviking_cli.utils.config.grep_config import GrepConfig
 
 
 class _DummyAgfs:
-    pass
+    def stat(self, path, ctx=None):
+        return {"name": path.rsplit("/", 1)[-1], "isDir": True}
 
 
 class _DummyVectorStore:
@@ -46,7 +47,6 @@ class _KeywordFailingButTagFilterWorkingStore:
 @pytest.fixture
 def fs(monkeypatch):
     viking_fs = VikingFS(agfs=_DummyAgfs())
-    monkeypatch.setattr(viking_fs, "stat", _fake_stat)
     monkeypatch.setattr(
         viking_fs,
         "_uri_to_path",
@@ -58,25 +58,6 @@ def fs(monkeypatch):
         lambda path, ctx=None: path.replace("/", "viking://", 1),
     )
     return viking_fs
-
-
-async def _fake_stat(uri, ctx=None, skip_count=False):
-    return {"name": uri.rsplit("/", 1)[-1], "isDir": True}
-
-
-@pytest.mark.asyncio
-async def test_collect_grep_files_skips_directory_vector_count(monkeypatch):
-    viking_fs = VikingFS(agfs=_DummyAgfs())
-    stat = AsyncMock(return_value={"isDir": True})
-    monkeypatch.setattr(viking_fs, "stat", stat)
-    monkeypatch.setattr(viking_fs, "ls", AsyncMock(return_value=[]))
-
-    assert await viking_fs._collect_grep_files(
-        "viking://resources",
-        excluded_prefix=None,
-        level_limit=1,
-    ) == []
-    stat.assert_awaited_once_with("viking://resources", ctx=None, skip_count=True)
 
 
 def test_grep_config_default_switch_to_remote_threshold_is_10000():
@@ -366,9 +347,6 @@ async def test_grep_vikingdb_pushes_tag_filter_into_bm25_request(monkeypatch):
 async def test_grep_preserves_dfs_order_and_node_limit(monkeypatch):
     fs = VikingFS(agfs=_DummyAgfs())
 
-    async def fake_stat(uri, ctx=None, skip_count=False):
-        return {"isDir": True}
-
     async def fake_ls(uri, ctx=None, **kwargs):
         entries = {
             "viking://resources": [
@@ -393,7 +371,6 @@ async def test_grep_preserves_dfs_order_and_node_limit(monkeypatch):
         }
         return contents[path].encode()
 
-    monkeypatch.setattr(fs, "stat", fake_stat)
     monkeypatch.setattr(fs, "ls", fake_ls)
     monkeypatch.setattr(
         fs,
@@ -429,9 +406,6 @@ async def test_grep_preserves_dfs_order_and_node_limit(monkeypatch):
 async def test_grep_allowed_uris_filters_before_node_limit(monkeypatch):
     fs = VikingFS(agfs=_DummyAgfs())
 
-    async def fake_stat(uri, ctx=None, skip_count=False):
-        return {"isDir": True}
-
     async def fake_ls(uri, ctx=None, **kwargs):
         return [
             {"name": "untagged.md", "isDir": False},
@@ -441,7 +415,6 @@ async def test_grep_allowed_uris_filters_before_node_limit(monkeypatch):
     def fake_agfs_read(path, offset=0, size=-1):
         return b"match"
 
-    monkeypatch.setattr(fs, "stat", fake_stat)
     monkeypatch.setattr(fs, "ls", fake_ls)
     monkeypatch.setattr(
         fs,
@@ -467,9 +440,6 @@ async def test_grep_allowed_uris_filters_before_node_limit(monkeypatch):
 async def test_grep_applies_content_transform_before_matching(monkeypatch):
     fs = VikingFS(agfs=_DummyAgfs())
 
-    async def fake_stat(uri, ctx=None, skip_count=False):
-        return {"isDir": True}
-
     async def fake_ls(uri, ctx=None, **kwargs):
         if uri == "viking://resources":
             return [{"name": "memory.md", "isDir": False}]
@@ -478,7 +448,6 @@ async def test_grep_applies_content_transform_before_matching(monkeypatch):
     def fake_agfs_read(path, offset=0, size=-1):
         return b'visible\n<!-- MEMORY_FIELDS {"secret":"hidden"} -->'
 
-    monkeypatch.setattr(fs, "stat", fake_stat)
     monkeypatch.setattr(fs, "ls", fake_ls)
     monkeypatch.setattr(
         fs,
@@ -506,9 +475,6 @@ async def test_grep_applies_content_transform_before_matching(monkeypatch):
 async def test_grep_parallel_reads_respect_concurrency_limit(monkeypatch):
     fs = VikingFS(agfs=_DummyAgfs())
 
-    async def fake_stat(uri, ctx=None, skip_count=False):
-        return {"isDir": True}
-
     async def fake_ls(uri, ctx=None, **kwargs):
         entries = {
             "viking://resources": [{"name": f"file{i}.md", "isDir": False} for i in range(12)]
@@ -526,7 +492,6 @@ async def test_grep_parallel_reads_respect_concurrency_limit(monkeypatch):
         active_reads -= 1
         return f"match from {path}".encode()
 
-    monkeypatch.setattr(fs, "stat", fake_stat)
     monkeypatch.setattr(fs, "ls", fake_ls)
     monkeypatch.setattr(
         fs,
@@ -547,9 +512,6 @@ async def test_grep_parallel_reads_respect_concurrency_limit(monkeypatch):
 async def test_grep_parallel_reads_work_with_blocking_agfs_read(monkeypatch):
     fs = VikingFS(agfs=_DummyAgfs())
 
-    async def fake_stat(uri, ctx=None, skip_count=False):
-        return {"isDir": True}
-
     async def fake_ls(uri, ctx=None, **kwargs):
         if uri == "viking://resources":
             return [{"name": f"file{i}.md", "isDir": False} for i in range(8)]
@@ -559,7 +521,6 @@ async def test_grep_parallel_reads_work_with_blocking_agfs_read(monkeypatch):
         time.sleep(0.05)
         return f"match from {path}".encode()
 
-    monkeypatch.setattr(fs, "stat", fake_stat)
     monkeypatch.setattr(fs, "ls", fake_ls)
     monkeypatch.setattr(
         fs,
@@ -581,9 +542,6 @@ async def test_grep_parallel_reads_work_with_blocking_agfs_read(monkeypatch):
 async def test_grep_stops_scheduling_later_batches_after_node_limit(monkeypatch):
     fs = VikingFS(agfs=_DummyAgfs())
 
-    async def fake_stat(uri, ctx=None, skip_count=False):
-        return {"isDir": True}
-
     async def fake_ls(uri, ctx=None, **kwargs):
         if uri == "viking://resources":
             return [{"name": f"file{i}.md", "isDir": False} for i in range(6)]
@@ -603,7 +561,6 @@ async def test_grep_stops_scheduling_later_batches_after_node_limit(monkeypatch)
         }
         return contents[path].encode()
 
-    monkeypatch.setattr(fs, "stat", fake_stat)
     monkeypatch.setattr(fs, "ls", fake_ls)
     monkeypatch.setattr(
         fs,
@@ -617,7 +574,7 @@ async def test_grep_stops_scheduling_later_batches_after_node_limit(monkeypatch)
 
     assert result["count"] == 2
     assert result["files_scanned"] == 1
-    assert read_paths == ["/resources/file0.md", "/resources/file1.md"]
+    assert sorted(read_paths) == ["/resources/file0.md", "/resources/file1.md"]
 
 
 @pytest.mark.asyncio

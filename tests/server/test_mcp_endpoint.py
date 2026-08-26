@@ -645,7 +645,7 @@ async def test_read_image_returns_native_mcp_content(monkeypatch, uri, image_byt
             fs=SimpleNamespace(
                 read_file_bytes=read_file_bytes,
                 read_visible=read_visible,
-                stat=stat,
+                stat_metadata=stat,
             )
         ),
     )
@@ -673,7 +673,7 @@ async def test_read_mixed_batch_preserves_source_order(monkeypatch):
             fs=SimpleNamespace(
                 read_file_bytes=read_file_bytes,
                 read_visible=read_visible,
-                stat=stat,
+                stat_metadata=stat,
             )
         ),
     )
@@ -712,7 +712,7 @@ async def test_read_audio_returns_native_mcp_content(monkeypatch, uri, audio_byt
             fs=SimpleNamespace(
                 read_file_bytes=read_file_bytes,
                 read_visible=AsyncMock(),
-                stat=stat,
+                stat_metadata=stat,
             )
         ),
     )
@@ -737,7 +737,7 @@ async def test_read_video_returns_unsupported_hint(monkeypatch):
             fs=SimpleNamespace(
                 read_file_bytes=AsyncMock(),
                 read_visible=read_visible,
-                stat=stat,
+                stat_metadata=stat,
             )
         ),
     )
@@ -749,7 +749,6 @@ async def test_read_video_returns_unsupported_hint(monkeypatch):
     stat.assert_awaited_once_with(
         "viking://resources/demo.mp4",
         ctx=DEFAULT_CTX,
-        skip_count=True,
     )
     read_visible.assert_not_awaited()
 
@@ -764,7 +763,7 @@ async def test_read_video_nonexistent_uri_preserves_not_found(monkeypatch):
             fs=SimpleNamespace(
                 read_file_bytes=AsyncMock(),
                 read_visible=read_visible,
-                stat=stat,
+                stat_metadata=stat,
             )
         ),
     )
@@ -776,7 +775,6 @@ async def test_read_video_nonexistent_uri_preserves_not_found(monkeypatch):
     stat.assert_awaited_once_with(
         "viking://resources/missing.mp4",
         ctx=DEFAULT_CTX,
-        skip_count=True,
     )
     read_visible.assert_not_awaited()
 
@@ -791,7 +789,7 @@ async def test_read_video_directory_uri_preserves_directory_hint(monkeypatch):
             fs=SimpleNamespace(
                 read_file_bytes=AsyncMock(),
                 read_visible=read_visible,
-                stat=stat,
+                stat_metadata=stat,
             )
         ),
     )
@@ -803,7 +801,6 @@ async def test_read_video_directory_uri_preserves_directory_hint(monkeypatch):
     stat.assert_awaited_once_with(
         "viking://resources/archive.mp4",
         ctx=DEFAULT_CTX,
-        skip_count=True,
     )
     read_visible.assert_not_awaited()
 
@@ -817,7 +814,7 @@ async def test_read_rejects_spoofed_image_extension(monkeypatch):
             fs=SimpleNamespace(
                 read_file_bytes=read_file_bytes,
                 read_visible=AsyncMock(),
-                stat=AsyncMock(return_value={"size": 12, "isDir": False}),
+                stat_metadata=AsyncMock(return_value={"size": 12, "isDir": False}),
             )
         ),
     )
@@ -837,7 +834,7 @@ async def test_read_rejects_images_too_large_for_common_clients(monkeypatch):
             fs=SimpleNamespace(
                 read_file_bytes=read_file_bytes,
                 read_visible=AsyncMock(),
-                stat=AsyncMock(return_value={"size": oversized, "isDir": False}),
+                stat_metadata=AsyncMock(return_value={"size": oversized, "isDir": False}),
             )
         ),
     )
@@ -863,7 +860,7 @@ async def test_read_rejects_media_batch_over_aggregate_limit_before_read(monkeyp
             fs=SimpleNamespace(
                 read_file_bytes=read_file_bytes,
                 read_visible=AsyncMock(),
-                stat=stat,
+                stat_metadata=stat,
             )
         ),
     )

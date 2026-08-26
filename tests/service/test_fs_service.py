@@ -54,21 +54,16 @@ class _FakeVikingFS:
 
 
 @pytest.mark.asyncio
-async def test_stat_forwards_skip_count_without_changing_default(request_context):
-    viking_fs = SimpleNamespace(stat=AsyncMock(return_value={"isDir": True}))
+async def test_stat_metadata_uses_lightweight_viking_fs_path(request_context):
+    viking_fs = SimpleNamespace(stat_metadata=AsyncMock(return_value={"isDir": True}))
     service = FSService(viking_fs=viking_fs)
 
-    await service.stat("viking://resources", request_context, skip_count=True)
-    await service.stat("viking://resources", request_context)
+    result = await service.stat_metadata("viking://resources", request_context)
 
-    assert viking_fs.stat.await_args_list[0].kwargs == {
-        "ctx": request_context,
-        "skip_count": True,
-    }
-    assert viking_fs.stat.await_args_list[1].kwargs == {
-        "ctx": request_context,
-        "skip_count": False,
-    }
+    assert result == {"isDir": True}
+    viking_fs.stat_metadata.assert_awaited_once_with(
+        "viking://resources", ctx=request_context
+    )
 
 
 class _FakeMutationCoordinator:
