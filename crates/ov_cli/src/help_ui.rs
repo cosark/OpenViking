@@ -383,7 +383,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
                 description: "Grant read access to a user.",
             },
             HelpItem {
-                label: "ov acl set viking://resources/project-a --restricted true",
+                label: "ov acl set viking://resources/project-a --acl-mode restricted",
                 description: "Ignore inherited permissions without deleting them.",
             },
         ],

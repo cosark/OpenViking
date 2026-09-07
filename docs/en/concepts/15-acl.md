@@ -42,7 +42,7 @@ Each higher level includes the lower levels. A `manage` grant therefore includes
 A normal node combines direct and inherited grants. A restricted node uses only direct grants:
 
 ```text
-effective(node) = direct(node) + (restricted(node) ? empty : inherited(node))
+effective(node) = direct(node) + (acl_mode(node) == "restricted" ? empty : inherited(node))
 ```
 
 `inherited(node)` always stores the parent's current effective permissions. It continues to refresh while the node is restricted, and disabling restricted mode applies the latest inherited value immediately. Descendants inherit the current node's effective permissions, so they cannot bypass an intermediate restricted boundary.
@@ -63,7 +63,7 @@ The effective permissions on `report.md` are:
 
 If `A/B` becomes restricted, Bob's grant on `A` no longer applies to `A/B` or its descendants, but the stored inherited value is not deleted. Disabling restricted mode immediately restores Bob's inherited access.
 
-## Default Behavior and `acl_enabled`
+## Default Behavior and `acl_mode`
 
 The account-level `acl.enabled` setting is disabled by default. While disabled,
 shared resources keep the existing URI namespace visibility and write rules.
@@ -79,13 +79,13 @@ remains public. Disabling the setting also stops enforcing existing ACLs.
 descendants only inherit it. Re-embedding or replacing an existing context record
 does not change its direct ACL.
 
-When the node or any ancestor has a direct ACL, or the path contains a restricted node, the node enters the ACL-controlled domain:
+`acl_mode` describes a resource's ACL behavior, separately from the account-wide `acl.enabled` switch:
 
-```text
-acl_enabled = true
-```
+- `none`: use the original visibility rules without resource ACL enforcement.
+- `inherit`: use direct grants and permissions inherited from the parent.
+- `restricted`: use direct grants only, while retaining and refreshing inherited grants.
 
-`acl_enabled` is derived by the system and cannot be set by an API caller. It returns to `false` only after the last applicable direct ACL and restricted boundary are removed.
+Users with `manage` can switch between `inherit` and `restricted`, but cannot set `none` to bypass the parent's ACL. After exiting restricted mode, a node without direct grants returns to `none` if its parent is not ACL-controlled. A restricted node with no direct grants remains protected, as do descendants without separate grants; account administrators retain implicit management access.
 
 ## File Operations
 
@@ -119,15 +119,14 @@ For a directory, `stat.count` uses the same path and ACL scalar filter and repor
 ACL data exists only in the context collection. Each context record stores direct and inherited permissions in native scalar fields:
 
 ```text
-acl_enabled
-acl_restricted
+acl_mode
 acl_direct_grants
 acl_inherited_grants
 ```
 
-`acl_direct_grants` is the ACL assigned to the current node. `acl_inherited_grants` stores the parent's current effective ACL. `acl_restricted` controls whether inherited grants contribute to the current node's effective permissions. Each principal stores only its highest level as `{mask}:{principal}`: `1` means `read`, `3` means `write`, and `7` means `manage`. There is no separate ACL collection.
+`acl_direct_grants` is the ACL assigned to the current node. `acl_inherited_grants` stores the parent's current effective ACL. `acl_mode` controls whether inherited grants contribute to the current node's effective permissions. Each principal stores only its highest level as `{mask}:{principal}`: `1` means `read`, `3` means `write`, and `7` means `manage`. There is no separate ACL collection.
 
-The request principals are `user:{ctx.user_id}`, `user:*`, and one `group:{group_id}` for each ID in `ctx.group_ids`. `find/search` always matches direct grants and matches inherited grants only when `acl_restricted=false`. Private resources remain isolated by URI owner. Legacy records without ACL fields are treated as `acl_enabled=false` and `acl_restricted=false`, so they do not require a full data backfill.
+The request principals are `user:{ctx.user_id}`, `user:*`, and one `group:{group_id}` for each ID in `ctx.group_ids`. Within the shared scope, retrieval identifies controlled records with `acl_mode IN [inherit, restricted]`, then matches each principal's `1`, `3`, and `7` grant tokens: direct or inherited for inherit mode, direct only for restricted mode. Missing, `null`, and `none` modes retain legacy visibility rules and are neither dropped nor mistaken for ACL-controlled records. Private resources remain isolated by URI owner.
 
 A retrieval target URI is only a search scope; the caller does not need to read the target node itself. A user can discover a deeply shared file even when intermediate directories are not readable.
 
@@ -165,7 +164,7 @@ If an ancestor still grants Bob access, that inherited permission remains effect
 Use only direct grants on the current node while preserving and refreshing inherited grants:
 
 ```bash
-ov acl set viking://resources/project-a --restricted true
+ov acl set viking://resources/project-a --acl-mode restricted
 ```
 
 ## Related Documentation

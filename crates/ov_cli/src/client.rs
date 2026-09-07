@@ -445,14 +445,14 @@ impl HttpClient {
         &self,
         uri: &str,
         entries: Vec<Value>,
-        restricted: Option<bool>,
+        acl_mode: Option<String>,
     ) -> Result<Value> {
         let mut body = serde_json::json!({"uri": uri});
         if !entries.is_empty() {
             body["entries"] = serde_json::Value::Array(entries);
         }
-        if let Some(restricted) = restricted {
-            body["restricted"] = serde_json::Value::Bool(restricted);
+        if let Some(acl_mode) = acl_mode {
+            body["acl_mode"] = serde_json::Value::String(acl_mode);
         }
         self.put("/api/v1/acl", &body).await
     }

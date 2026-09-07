@@ -19,9 +19,10 @@ from openviking.core.namespace import (
 from openviking.server.identity import RequestContext, Role
 from openviking.storage.acl import (
     ACL_CONTEXT_FIELDS,
-    ACL_RESTRICTED_FIELD,
+    ACL_MODE_FIELD,
     AclAction,
     AclManager,
+    AclMode,
     acl_grant_tokens,
     acl_principals,
     is_acl_uri,
@@ -2276,9 +2277,17 @@ class VikingVectorIndexBackend:
                 ]
             )
 
-        legacy_filter = And(
+        controlled_modes = [AclMode.INHERIT.value, AclMode.RESTRICTED.value]
+        uncontrolled_filter = And(
             [
-                RawDSL({"op": "must_not", "field": "acl_enabled", "conds": [True]}),
+                RawDSL(
+                    {
+                        "op": "must_not",
+                        "field": ACL_MODE_FIELD,
+                        # Exclude controlled modes so absent/null fields stay visible.
+                        "conds": controlled_modes,
+                    }
+                ),
                 Or([PathScope("uri", root, depth=-1) for root in visible_roots(ctx)]),
             ]
         )
@@ -2286,18 +2295,13 @@ class VikingVectorIndexBackend:
         shared_acl_filter = And(
             [
                 PathScope("uri", "viking://resources", depth=-1),
+                In(ACL_MODE_FIELD, controlled_modes),
                 Or(
                     [
                         In("acl_direct_grants", read_grants),
                         And(
                             [
-                                RawDSL(
-                                    {
-                                        "op": "must_not",
-                                        "field": ACL_RESTRICTED_FIELD,
-                                        "conds": [True],
-                                    }
-                                ),
+                                Eq(ACL_MODE_FIELD, AclMode.INHERIT.value),
                                 In("acl_inherited_grants", read_grants),
                             ]
                         ),
@@ -2306,7 +2310,7 @@ class VikingVectorIndexBackend:
             ]
         )
         access_filters: List[FilterExpr] = [
-            legacy_filter,
+            uncontrolled_filter,
             shared_acl_filter,
             PathScope("uri", f"{canonical_user_root(ctx)}/resources", depth=-1),
         ]

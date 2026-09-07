@@ -14,7 +14,7 @@ type ACLEntry struct {
 
 // SetACLOptions controls optional ACL properties updated together with direct entries.
 type SetACLOptions struct {
-	Restricted *bool
+	ACLMode string
 }
 
 // ACL returns the direct, inherited, and effective ACL for a URI.
@@ -34,19 +34,19 @@ func (c *Client) SetACL(ctx context.Context, uri string, entries []ACLEntry, opt
 		"uri":     NormalizeURI(uri),
 		"entries": entries,
 	}
-	if len(options) > 0 && options[0].Restricted != nil {
-		body["restricted"] = *options[0].Restricted
+	if len(options) > 0 && options[0].ACLMode != "" {
+		body["acl_mode"] = options[0].ACLMode
 	}
 	var result map[string]any
 	err := c.doJSON(ctx, http.MethodPut, "/api/v1/acl", nil, body, &result)
 	return result, err
 }
 
-// SetACLRestricted changes whether inherited grants are effective without changing them.
-func (c *Client) SetACLRestricted(ctx context.Context, uri string, restricted bool) (map[string]any, error) {
+// SetACLMode switches between inherit and restricted without changing direct grants.
+func (c *Client) SetACLMode(ctx context.Context, uri, aclMode string) (map[string]any, error) {
 	var result map[string]any
 	err := c.doJSON(ctx, http.MethodPut, "/api/v1/acl", nil, map[string]any{
-		"uri": NormalizeURI(uri), "restricted": restricted,
+		"uri": NormalizeURI(uri), "acl_mode": aclMode,
 	}, &result)
 	return result, err
 }

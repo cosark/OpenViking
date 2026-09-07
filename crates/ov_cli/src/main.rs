@@ -298,9 +298,9 @@ enum AclCommands {
         uri: String,
         #[arg(long = "entry")]
         entries: Vec<String>,
-        /// Whether inherited ACL entries are ignored by this node
-        #[arg(long, action = clap::ArgAction::Set, value_name = "true|false")]
-        restricted: Option<bool>,
+        /// Whether this node uses inherited grants or direct grants only
+        #[arg(long, value_parser = ["inherit", "restricted"])]
+        acl_mode: Option<String>,
     },
     Grant {
         uri: String,

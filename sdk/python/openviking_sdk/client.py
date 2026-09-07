@@ -9,7 +9,7 @@ import uuid
 import zipfile
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Mapping, Optional, Type, Union
+from typing import Any, Callable, Dict, List, Literal, Mapping, Optional, Type, Union
 from urllib.parse import quote
 
 import httpx
@@ -1318,15 +1318,15 @@ class AsyncHTTPClient:
         uri: str,
         entries: Optional[List[Dict[str, str]]] = None,
         *,
-        restricted: Optional[bool] = None,
+        acl_mode: Optional[Literal["inherit", "restricted"]] = None,
     ) -> Dict[str, Any]:
-        if entries is None and restricted is None:
-            raise ValueError("Either entries or restricted must be provided")
+        if entries is None and acl_mode is None:
+            raise ValueError("Either entries or acl_mode must be provided")
         payload: Dict[str, Any] = {"uri": VikingURI.normalize(uri)}
         if entries is not None:
             payload["entries"] = entries
-        if restricted is not None:
-            payload["restricted"] = restricted
+        if acl_mode is not None:
+            payload["acl_mode"] = acl_mode
         response = await self._http.put(
             "/api/v1/acl",
             json=payload,
@@ -2538,11 +2538,9 @@ class SyncHTTPClient:
         uri: str,
         entries: Optional[List[Dict[str, str]]] = None,
         *,
-        restricted: Optional[bool] = None,
+        acl_mode: Optional[Literal["inherit", "restricted"]] = None,
     ) -> Dict[str, Any]:
-        return run_async(
-            self._async_client.acl_set(uri, entries, restricted=restricted)
-        )
+        return run_async(self._async_client.acl_set(uri, entries, acl_mode=acl_mode))
 
     def acl_grant(self, uri: str, principal: str, level: str) -> Dict[str, Any]:
         return run_async(self._async_client.acl_grant(uri, principal, level))

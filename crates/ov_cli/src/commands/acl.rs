@@ -21,13 +21,13 @@ pub async fn set(
     client: &HttpClient,
     uri: &str,
     raw_entries: Vec<String>,
-    restricted: Option<bool>,
+    acl_mode: Option<String>,
     output_format: OutputFormat,
     compact: bool,
 ) -> Result<()> {
-    if raw_entries.is_empty() && restricted.is_none() {
+    if raw_entries.is_empty() && acl_mode.is_none() {
         return Err(Error::Client(
-            "Provide at least one --entry or --restricted true|false.".to_string(),
+            "Provide at least one --entry or --acl-mode inherit|restricted.".to_string(),
         ));
     }
     let mut entries = Vec::new();
@@ -40,7 +40,7 @@ pub async fn set(
         entries.push(json!({"principal": principal, "level": level}));
     }
     show(
-        client.acl_set(uri, entries, restricted).await?,
+        client.acl_set(uri, entries, acl_mode).await?,
         output_format,
         compact,
     )
