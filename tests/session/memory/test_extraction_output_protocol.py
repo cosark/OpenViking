@@ -1580,3 +1580,45 @@ def test_python_allows_small_replace():
 
     assert error is None
     assert operations.model_dump()["profile"][0]["content"] == "a b c"
+
+
+def test_python_rejects_fstring_width_format_spec():
+    context = _context([_profile_schema()])
+    protocol = create_extraction_output_protocol("python")
+
+    # A width format spec turns a small integer literal into a huge padded string
+    # with no repeat operator; format specs are disallowed.
+    operations, error = protocol.parse(
+        'sdk.set_profile(content=f"{\'x\':>1000001}")\nsdk.commit()',
+        context,
+    )
+
+    assert operations is None
+    assert "format spec" in error
+
+
+def test_python_allows_plain_fstring():
+    context = _context([_profile_schema()])
+    protocol = create_extraction_output_protocol("python")
+
+    operations, error = protocol.parse(
+        'name = "Ada"\nsdk.set_profile(content=f"# {name}")\nsdk.commit()',
+        context,
+    )
+
+    assert error is None
+    assert operations.model_dump()["profile"][0]["content"] == "# Ada"
+
+
+def test_python_rejects_string_percent_formatting():
+    context = _context([_profile_schema()])
+    protocol = create_extraction_output_protocol("python")
+
+    # "%1000001s" % "x" pads to ~1M chars via a width field, no repeat operator.
+    operations, error = protocol.parse(
+        'sdk.set_profile(content="%1000001s" % "x")\nsdk.commit()',
+        context,
+    )
+
+    assert operations is None
+    assert "%-formatting is not allowed" in error

@@ -1263,13 +1263,32 @@ class _PythonProgramCompiler:
             value = str(value)
         elif node.conversion != -1:
             self._error(node, "unsupported f-string conversion")
-        format_spec = self._eval(node.format_spec) if node.format_spec is not None else ""
-        return format(value, format_spec)
+        # A format spec (e.g. {x:>1000001}) can turn a small integer literal into
+        # an arbitrarily large padded string with no repeat operator. Memory
+        # content never needs printf-style alignment/width, so disallow any
+        # non-empty format spec instead of trying to bound width inflation.
+        if node.format_spec is not None:
+            spec = self._eval(node.format_spec)
+            if spec != "":
+                self._error(
+                    node,
+                    "f-string format specs are not allowed; use plain {value} without a "
+                    "':' width/format spec",
+                )
+        return format(value, "")
 
     def _eval_binop(self, node: ast.BinOp) -> Any:
         if isinstance(node.op, ast.Mult):
             return self._eval_mult(node)
         left, right = self._eval(node.left), self._eval(node.right)
+        if isinstance(node.op, ast.Mod) and isinstance(left, (str, bytes)):
+            # str/bytes % formatting (e.g. "%1000001s" % "x") can inflate a small
+            # literal into a huge padded string via a width field, with no repeat
+            # operator. Memory content never needs printf formatting, so disallow it.
+            self._error(
+                node,
+                "string %-formatting is not allowed; build content with plain literals",
+            )
         operations = {
             ast.Add: lambda: self._checked_concat(node, left, right),
             ast.Sub: lambda: left - right,
