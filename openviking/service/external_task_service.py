@@ -202,11 +202,11 @@ class ExternalTaskService:
                 stage="polling" if external_task_id else "submitting",
             )
             if external_task_id is None:
-                external_task_id = await self._retry(
-                    lambda: provider.submit(task_id, payload, private_payload, connection),
-                    task_id=task_id,
-                    operation_name="submit",
-                    poll_interval=provider.poll_interval_seconds,
+                external_task_id = await provider.submit(
+                    task_id,
+                    payload,
+                    private_payload,
+                    connection,
                 )
                 await tracker.update_task_auth(
                     task_id,

@@ -188,6 +188,13 @@ class CompileAPIClient:
         try:
             body = response.json()
         except ValueError as exc:
+            if not response.is_success:
+                raise ExternalTaskError(
+                    "UNAVAILABLE" if response.status_code >= 500 else "INVALID_ARGUMENT",
+                    "Compile API request failed",
+                    transient=response.status_code in {408, 425, 429}
+                    or response.status_code >= 500,
+                ) from exc
             raise ExternalTaskError(
                 "INVALID_RESPONSE",
                 "Compile API returned a non-JSON response",
