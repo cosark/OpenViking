@@ -750,6 +750,7 @@ async def test_unindexed_source_preserves_target_records_and_acl(
     effective = await backend.acl_manager.resolve(target, _ctx())
     assert effective.context_fields() == {
         "acl_enabled": private,
+        "acl_restricted": False,
         "acl_direct_grants": ["7:user:bob"] if private else [],
         "acl_inherited_grants": [],
     }
