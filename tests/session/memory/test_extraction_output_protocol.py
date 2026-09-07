@@ -573,6 +573,52 @@ sdk.commit()
     assert edited and edited[0]["page_id"] == 1
 
 
+def _schema_named(memory_type: str, field_names: list[str]) -> MemoryTypeSchema:
+    return MemoryTypeSchema(
+        memory_type=memory_type,
+        description=memory_type,
+        directory=f"viking://user/{{{{ user_space }}}}/memories/{memory_type}",
+        filename_template="{{ name }}.md",
+        fields=[
+            MemoryField(name=name, field_type=FieldType.STRING, merge_op=MergeOp.PATCH)
+            for name in field_names
+        ],
+    )
+
+
+def test_python_rejects_colliding_memory_type_aliases():
+    # 'project-notes' and 'project_notes' both fold to the same DSL alias.
+    context = _context(
+        [_schema_named("project-notes", ["name"]), _schema_named("project_notes", ["name"])]
+    )
+    protocol = create_extraction_output_protocol("python")
+
+    with pytest.raises(ValueError, match="same Python DSL alias"):
+        protocol.render_contract(context)
+
+
+def test_python_rejects_colliding_field_aliases():
+    # 'note-body' and 'note_body' collide within one schema.
+    context = _context([_schema_named("notes", ["note-body", "note_body"])])
+    protocol = create_extraction_output_protocol("python")
+
+    with pytest.raises(ValueError, match="same Python DSL alias"):
+        protocol.render_contract(context)
+
+
+def test_python_parse_rejects_colliding_aliases_without_render():
+    # Collision must be caught even when parse() runs without render_contract().
+    context = _context(
+        [_schema_named("project-notes", ["name"]), _schema_named("project_notes", ["name"])]
+    )
+    protocol = create_extraction_output_protocol("python")
+
+    operations, error = protocol.parse("sdk.commit()", context)
+
+    assert operations is None
+    assert "same Python DSL alias" in error
+
+
 def test_python_syntax_error_includes_offending_source_line():
     context = _context([_preference_schema()])
     protocol = create_extraction_output_protocol("python")

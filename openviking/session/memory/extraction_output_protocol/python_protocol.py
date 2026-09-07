@@ -167,6 +167,7 @@ class PythonExtractionOutputProtocol(ExtractionOutputProtocol):
         self._last_error_allows_tool_retry = False
 
     def render_contract(self, context: ExtractionOutputContext) -> str:
+        _validate_alias_uniqueness(context.schemas)
         lines = list(_CONTRACT_PREAMBLE)
         for schema in context.schemas:
             lines.extend(self._render_schema_contract(context, schema))
@@ -602,6 +603,10 @@ class _PythonProgramCompiler:
     ) -> None:
         self.context = context
         self.protocol = protocol
+        # Reject alias collisions before building the maps so a folded-name clash
+        # cannot silently overwrite a schema/field (also guards parse() paths that
+        # do not go through render_contract first).
+        _validate_alias_uniqueness(context.schemas)
         self.schemas = {schema.memory_type: schema for schema in context.schemas}
         # DSL surface uses identifier aliases; map them back to real schema names.
         self._type_alias_to_real = {
@@ -1556,3 +1561,34 @@ def _identifier_alias(name: str) -> str:
     if keyword.iskeyword(alias):
         alias = f"{alias}_"
     return alias
+
+
+def _validate_alias_uniqueness(schemas: tuple[MemoryTypeSchema, ...]) -> None:
+    """Reject schemas whose names collide after identifier-alias folding.
+
+    Aliasing is not one-to-one (e.g. 'project-notes' and 'project_notes' both
+    fold to 'project_notes'). A collision would make the DSL surface ambiguous
+    and silently route calls to the wrong schema/field, so fail loudly at build
+    time instead. Distinct-identifier names never collide, so real configs are
+    unaffected.
+    """
+    type_seen: dict[str, str] = {}
+    for schema in schemas:
+        alias = _identifier_alias(schema.memory_type)
+        if alias in type_seen and type_seen[alias] != schema.memory_type:
+            raise ValueError(
+                f"memory_type {type_seen[alias]!r} and {schema.memory_type!r} produce the same "
+                f"Python DSL alias {alias!r}; rename one to a distinct identifier"
+            )
+        type_seen[alias] = schema.memory_type
+
+        field_seen: dict[str, str] = {}
+        for name in {memory_field.name for memory_field in schema.fields}:
+            field_alias = _identifier_alias(name)
+            if field_alias in field_seen and field_seen[field_alias] != name:
+                raise ValueError(
+                    f"fields {field_seen[field_alias]!r} and {name!r} in memory_type "
+                    f"{schema.memory_type!r} produce the same Python DSL alias {field_alias!r}; "
+                    "rename one to a distinct identifier"
+                )
+            field_seen[field_alias] = name
