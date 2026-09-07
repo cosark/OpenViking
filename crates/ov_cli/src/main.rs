@@ -1111,6 +1111,9 @@ enum Commands {
         /// Description of this organization task
         #[arg(long, value_name = "text")]
         reason: Option<String>,
+        /// Provider arguments as a JSON object
+        #[arg(long, value_name = "json")]
+        args: Option<String>,
     },
 
     // --- Status & Observability ---
@@ -3559,6 +3562,7 @@ async fn main() {
             to,
             skill,
             reason,
+            args,
         } => {
             let client = ctx.get_client();
             commands::compile::run(
@@ -3567,6 +3571,7 @@ async fn main() {
                 to,
                 skill,
                 reason,
+                args,
                 ctx.output_format,
                 ctx.compact,
             )
@@ -3972,6 +3977,8 @@ mod tests {
             "viking://resources/wiki",
             "--skill",
             "viking://agent/skills/wiki",
+            "--args",
+            r#"{"model_name":"endpoint-1"}"#,
         ])
         .expect("compile flags should parse");
         match cli.command {
@@ -3979,11 +3986,13 @@ mod tests {
                 from_uris,
                 skill,
                 reason,
+                args,
                 ..
             } => {
                 assert_eq!(from_uris.len(), 3);
                 assert_eq!(skill, "viking://agent/skills/wiki");
                 assert!(reason.is_none());
+                assert_eq!(args.as_deref(), Some(r#"{"model_name":"endpoint-1"}"#));
             }
             _ => panic!("expected compile command"),
         }

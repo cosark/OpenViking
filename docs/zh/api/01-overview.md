@@ -505,7 +505,7 @@ JSON 输出 - 错误：
 | POST | `/api/v1/privacy-configs/{category}/{target_key}` | 写入并激活新版本 |
 | POST | `/api/v1/privacy-configs/{category}/{target_key}/activate` | 激活指定版本 |
 
-### [OpenViking Assets](22-openviking-assets.md)、[WebDAV](20-webdav.md) 与 [VikingBot API](24-vikingbot.md)
+### [OpenViking Assets](22-openviking-assets.md)、[WebDAV](20-webdav.md)、[Compile API](23-compile.md) 与 [VikingBot API](24-vikingbot.md)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -518,6 +518,7 @@ JSON 输出 - 错误：
 | DELETE | `/webdav/resources`、`/webdav/resources/{resource_path}` | 删除文件或目录 |
 | MKCOL | `/webdav/resources`、`/webdav/resources/{resource_path}` | 创建目录 |
 | MOVE | `/webdav/resources`、`/webdav/resources/{resource_path}` | 移动或重命名资源 |
+| POST | `/api/v1/compile` | 创建异步 Compile 任务 |
 | GET | `/bot/v1/health` | VikingBot 健康检查 |
 | POST | `/bot/v1/chat` | VikingBot 非流式对话 |
 | POST | `/bot/v1/chat/stream` | VikingBot 流式对话 |
@@ -539,4 +540,4 @@ JSON 输出 - 错误：
 | 数据生命周期 | Watch、快照、OVPack |
 | 运维与观测 | 系统、任务、Observer、Metrics |
 | 身份与治理 | 管理员、ACL、隐私配置 |
-| 协议与扩展 | OpenViking Assets、WebDAV、VikingBot API |
+| 协议与扩展 | OpenViking Assets、WebDAV、Compile API、VikingBot API |

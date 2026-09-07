@@ -1,6 +1,7 @@
 use crate::client::{CompileAccepted, HttpClient};
 use crate::error::{Error, Result};
 use crate::output::{OutputFormat, output_success};
+use serde_json::{Map, Value};
 
 pub async fn run(
     client: &HttpClient,
@@ -8,19 +9,33 @@ pub async fn run(
     to: String,
     skill: String,
     reason: Option<String>,
+    args: Option<String>,
     output_format: OutputFormat,
     compact: bool,
 ) -> Result<()> {
     let sources = normalize_sources(from_uris)?;
+    let args = parse_args(args.as_deref())?;
     let reason = reason
         .as_deref()
         .map(str::trim)
         .filter(|value| !value.is_empty());
     let accepted = client
-        .create_compile(&sources, to.trim(), skill.trim(), reason)
+        .create_compile(&sources, to.trim(), skill.trim(), reason, args.as_ref())
         .await?;
     render_accepted(&accepted, to.trim(), output_format, compact);
     Ok(())
+}
+
+fn parse_args(value: Option<&str>) -> Result<Option<Map<String, Value>>> {
+    let Some(value) = value else {
+        return Ok(None);
+    };
+    let parsed: Value = serde_json::from_str(value)
+        .map_err(|err| Error::Client(format!("--args must be valid JSON: {err}")))?;
+    let Value::Object(args) = parsed else {
+        return Err(Error::Client("--args must be a JSON object".into()));
+    };
+    Ok((!args.is_empty()).then_some(args))
 }
 
 fn normalize_sources(values: Vec<String>) -> Result<Vec<String>> {
@@ -61,7 +76,7 @@ fn render_accepted(
 
 #[cfg(test)]
 mod tests {
-    use super::normalize_sources;
+    use super::{normalize_sources, parse_args};
 
     #[test]
     fn expands_comma_separated_and_repeated_sources_stably() {
@@ -76,5 +91,10 @@ mod tests {
     #[test]
     fn rejects_empty_source_items() {
         assert!(normalize_sources(vec!["viking://resources/a,".into()]).is_err());
+        let args = parse_args(Some(r#"{"model_name":"endpoint-1"}"#))
+            .expect("args should be valid")
+            .expect("args should not be empty");
+        assert_eq!(args["model_name"], "endpoint-1");
+        assert!(parse_args(Some("[]")).is_err());
     }
 }

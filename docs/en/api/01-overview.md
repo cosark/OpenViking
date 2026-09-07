@@ -510,7 +510,7 @@ This catalog follows the routes actually mounted by the server. Each group headi
 | POST | `/api/v1/privacy-configs/{category}/{target_key}` | Write and activate a new version |
 | POST | `/api/v1/privacy-configs/{category}/{target_key}/activate` | Activate a version |
 
-### [OpenViking Assets](22-openviking-assets.md), [WebDAV](20-webdav.md), and [VikingBot API](24-vikingbot.md)
+### [OpenViking Assets](22-openviking-assets.md), [WebDAV](20-webdav.md), [Compile API](23-compile.md), and [VikingBot API](24-vikingbot.md)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -523,6 +523,7 @@ This catalog follows the routes actually mounted by the server. Each group headi
 | DELETE | `/webdav/resources`, `/webdav/resources/{resource_path}` | Delete a file or directory |
 | MKCOL | `/webdav/resources`, `/webdav/resources/{resource_path}` | Create a directory |
 | MOVE | `/webdav/resources`, `/webdav/resources/{resource_path}` | Move or rename a resource |
+| POST | `/api/v1/compile` | Create an asynchronous Compile task |
 | GET | `/bot/v1/health` | VikingBot health check |
 | POST | `/bot/v1/chat` | Non-streaming VikingBot chat |
 | POST | `/bot/v1/chat/stream` | Streaming VikingBot chat |
@@ -544,4 +545,4 @@ The sidebar is organized by responsibility rather than historical file size:
 | Data Lifecycle | Watches, snapshots, and OVPack |
 | Operations & Observability | System, tasks, Observer, and Metrics |
 | Identity & Governance | Administration, ACL, and privacy configuration |
-| Protocols & Extensions | OpenViking Assets, WebDAV, and VikingBot API |
+| Protocols & Extensions | OpenViking Assets, WebDAV, Compile API, and VikingBot API |

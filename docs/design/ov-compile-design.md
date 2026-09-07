@@ -38,7 +38,8 @@ ov compile \
   --from viking://resources/周报 \
   --to viking://resources/团队知识库 \
   --reason "按月整理团队的成本优化进展" \
-  --skill viking://agent/skills/monthly_wiki
+  --skill viking://agent/skills/monthly_wiki \
+  --args '{"model_name":"your-model-endpoint-id"}'
 ```
 
 | 参数 | 规则 |
@@ -47,6 +48,7 @@ ov compile \
 | `--to` | 必填，目标 Wiki 目录 |
 | `--skill` | 必填，Skill 目录或 `SKILL.md` 的 Viking URI |
 | `--reason` | 可选，本次整理任务的描述 |
+| `--args` | 可选，Provider 扩展参数 JSON 对象；`model_name` 可传模型 Endpoint ID |
 
 参数在 OpenViking 用户身份下 canonicalize 后满足以下约束：
 
