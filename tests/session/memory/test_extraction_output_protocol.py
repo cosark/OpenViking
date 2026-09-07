@@ -1551,3 +1551,32 @@ def test_python_rejects_huge_join_before_allocation():
 
     assert operations is None
     assert "size limit" in error
+
+
+def test_python_rejects_huge_replace_before_allocation():
+    context = _context([_profile_schema()])
+    protocol = create_extraction_output_protocol("python")
+
+    # 'x' occurs 1000 times; replacing each with a 10000-char string would
+    # inflate the result to ~10MB. The projected-size check must reject it
+    # before str.replace builds the string.
+    operations, error = protocol.parse(
+        'sdk.set_profile(content=("x" * 1000).replace("x", "y" * 10000))\nsdk.commit()',
+        context,
+    )
+
+    assert operations is None
+    assert "size limit" in error
+
+
+def test_python_allows_small_replace():
+    context = _context([_profile_schema()])
+    protocol = create_extraction_output_protocol("python")
+
+    operations, error = protocol.parse(
+        'sdk.set_profile(content="a-b-c".replace("-", " "))\nsdk.commit()',
+        context,
+    )
+
+    assert error is None
+    assert operations.model_dump()["profile"][0]["content"] == "a b c"

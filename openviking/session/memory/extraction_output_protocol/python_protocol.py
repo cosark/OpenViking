@@ -610,8 +610,7 @@ class _PythonProgramCompiler:
         self.schemas = {schema.memory_type: schema for schema in context.schemas}
         # DSL surface uses identifier aliases; map them back to real schema names.
         self._type_alias_to_real = {
-            _identifier_alias(schema.memory_type): schema.memory_type
-            for schema in context.schemas
+            _identifier_alias(schema.memory_type): schema.memory_type for schema in context.schemas
         }
         self._field_alias_to_real = {
             schema.memory_type: {
@@ -752,9 +751,9 @@ class _PythonProgramCompiler:
             alias_map = self._field_alias_to_real.get(owner.memory_type, {})
             real_field = alias_map.get(node.attr, node.attr)
             if node.attr.startswith("_") or real_field not in owner.fields:
-                available = ", ".join(
-                    sorted(_identifier_alias(name) for name in owner.fields)
-                ) or "(none)"
+                available = (
+                    ", ".join(sorted(_identifier_alias(name) for name in owner.fields)) or "(none)"
+                )
                 hint = (
                     " Use the real field name (e.g. content), not the literal word 'field'."
                     if node.attr == "field"
@@ -843,8 +842,42 @@ class _PythonProgramCompiler:
                         node,
                         f"joined string would exceed the {_MAX_EXPRESSION_SIZE:,}-character size limit",
                     )
+            elif node.func.attr == "replace" and len(args) >= 2:
+                # str.replace can inflate the result well beyond its input when the
+                # replacement is longer than the search text and occurs many times.
+                # Bound the projected size BEFORE calling replace so a huge result is
+                # never allocated (str.replace builds the whole string in C first).
+                count = args[2] if len(args) > 2 else kwargs.get("count")
+                self._check_replace_size(node, owner, args[0], args[1], count)
             return getattr(owner, node.func.attr)(*args, **kwargs)
         self._error(node, f"method {node.func.attr!r} is not allowed")
+
+    def _check_replace_size(
+        self, node: ast.AST, source: str, old: Any, new: Any, count: Any
+    ) -> None:
+        if not isinstance(old, str) or not isinstance(new, str):
+            self._error(node, "replace() expects string arguments")
+        old_bytes = len(old.encode("utf-8"))
+        new_bytes = len(new.encode("utf-8"))
+        source_bytes = len(source.encode("utf-8"))
+        if new_bytes <= old_bytes:
+            # Replacement is not longer than the match: result cannot grow.
+            return
+        if old == "":
+            # "".replace inserts new between every character (len+1 positions).
+            occurrences = len(source) + 1
+        else:
+            occurrences = source.count(old)
+        if isinstance(count, int) and not isinstance(count, bool) and count >= 0:
+            occurrences = min(occurrences, count)
+        elif count is not None:
+            self._error(node, "replace() count must be a non-negative integer")
+        projected = source_bytes + occurrences * (new_bytes - old_bytes)
+        if projected > _MAX_EXPRESSION_SIZE:
+            self._error(
+                node,
+                f"replaced string would exceed the {_MAX_EXPRESSION_SIZE:,}-character size limit",
+            )
 
     def _call_sdk(self, node: ast.Call, *, statement: bool) -> Any:
         method = node.func.attr
