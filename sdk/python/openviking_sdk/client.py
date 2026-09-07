@@ -1066,6 +1066,8 @@ class AsyncHTTPClient:
         extra_fields: Optional[List[str]] = None,
         tags: Optional[List[str]] = None,
         include_tags: bool = False,
+        offset: int = 0,
+        limit: Optional[int] = None,
     ) -> List[Any]:
         params: Dict[str, Any] = {
             "uri": VikingURI.normalize(uri),
@@ -1075,6 +1077,7 @@ class AsyncHTTPClient:
             "abs_limit": abs_limit,
             "show_all_hidden": show_all_hidden,
             "node_limit": node_limit,
+            "offset": offset,
         }
         if sort_by is not None:
             params["sort_by"] = sort_by
@@ -1085,6 +1088,8 @@ class AsyncHTTPClient:
             params["tags"] = tags
         if include_tags:
             params["include_tags"] = True
+        if limit is not None:
+            params["limit"] = limit
         response = await self._request(
             "GET",
             "/api/v1/fs/ls",
@@ -1103,6 +1108,8 @@ class AsyncHTTPClient:
         extra_fields: Optional[List[str]] = None,
         tags: Optional[List[str]] = None,
         include_tags: bool = False,
+        offset: int = 0,
+        limit: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         params: Dict[str, Any] = {
             "uri": VikingURI.normalize(uri),
@@ -1111,6 +1118,7 @@ class AsyncHTTPClient:
             "show_all_hidden": show_all_hidden,
             "node_limit": node_limit,
             "level_limit": level_limit,
+            "offset": offset,
         }
         if extra_fields:
             params["extra_fields"] = list(extra_fields)
@@ -1118,6 +1126,8 @@ class AsyncHTTPClient:
             params["tags"] = tags
         if include_tags:
             params["include_tags"] = True
+        if limit is not None:
+            params["limit"] = limit
         response = await self._request(
             "GET",
             "/api/v1/fs/tree",
@@ -1301,14 +1311,10 @@ class AsyncHTTPClient:
         return self._handle_response_data(response).get("result", {})
 
     async def acl_get(self, uri: str) -> Dict[str, Any]:
-        response = await self._http.get(
-            "/api/v1/acl", params={"uri": VikingURI.normalize(uri)}
-        )
+        response = await self._http.get("/api/v1/acl", params={"uri": VikingURI.normalize(uri)})
         return self._handle_response_data(response).get("result", {})
 
-    async def acl_set(
-        self, uri: str, entries: List[Dict[str, str]]
-    ) -> Dict[str, Any]:
+    async def acl_set(self, uri: str, entries: List[Dict[str, str]]) -> Dict[str, Any]:
         response = await self._http.put(
             "/api/v1/acl",
             json={"uri": VikingURI.normalize(uri), "entries": entries},
@@ -1900,14 +1906,10 @@ class AsyncHTTPClient:
         return self._handle_response(response)
 
     async def admin_delete_group(self, account_id: str, group_id: str) -> Dict[str, Any]:
-        response = await self._http.delete(
-            f"/api/v1/admin/accounts/{account_id}/groups/{group_id}"
-        )
+        response = await self._http.delete(f"/api/v1/admin/accounts/{account_id}/groups/{group_id}")
         return self._handle_response(response)
 
-    async def admin_list_group_members(
-        self, account_id: str, group_id: str
-    ) -> Dict[str, Any]:
+    async def admin_list_group_members(self, account_id: str, group_id: str) -> Dict[str, Any]:
         response = await self._http.get(
             f"/api/v1/admin/accounts/{account_id}/groups/{group_id}/members"
         )
@@ -2402,6 +2404,8 @@ class SyncHTTPClient:
         extra_fields: Optional[List[str]] = None,
         tags: Optional[List[str]] = None,
         include_tags: bool = False,
+        offset: int = 0,
+        limit: Optional[int] = None,
     ) -> List[Any]:
         return run_async(
             self._async_client.ls(
@@ -2417,6 +2421,8 @@ class SyncHTTPClient:
                 extra_fields=extra_fields,
                 tags=tags,
                 include_tags=include_tags,
+                offset=offset,
+                limit=limit,
             )
         )
 
@@ -2431,6 +2437,8 @@ class SyncHTTPClient:
         extra_fields: Optional[List[str]] = None,
         tags: Optional[List[str]] = None,
         include_tags: bool = False,
+        offset: int = 0,
+        limit: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         return run_async(
             self._async_client.tree(
@@ -2443,6 +2451,8 @@ class SyncHTTPClient:
                 extra_fields=extra_fields,
                 tags=tags,
                 include_tags=include_tags,
+                offset=offset,
+                limit=limit,
             )
         )
 
@@ -2520,9 +2530,7 @@ class SyncHTTPClient:
         options: Optional[SetTagsOptions] = None,
     ) -> Dict[str, Any]:
         return run_async(
-            self._async_client.set_tags(
-                uri, tags, mode=mode, recursive=recursive, options=options
-            )
+            self._async_client.set_tags(uri, tags, mode=mode, recursive=recursive, options=options)
         )
 
     def acl_get(self, uri: str) -> Dict[str, Any]:
@@ -2820,9 +2828,7 @@ class SyncHTTPClient:
         limit: Optional[int] = None,
         page: int = 1,
     ) -> List[Any]:
-        return run_async(
-            self._async_client.admin_list_accounts(name=name, limit=limit, page=page)
-        )
+        return run_async(self._async_client.admin_list_accounts(name=name, limit=limit, page=page))
 
     def admin_delete_account(self, account_id: str) -> Dict[str, Any]:
         return run_async(self._async_client.admin_delete_account(account_id))
@@ -2885,9 +2891,7 @@ class SyncHTTPClient:
     def admin_add_group_member(
         self, account_id: str, group_id: str, user_id: str
     ) -> Dict[str, Any]:
-        return run_async(
-            self._async_client.admin_add_group_member(account_id, group_id, user_id)
-        )
+        return run_async(self._async_client.admin_add_group_member(account_id, group_id, user_id))
 
     def admin_remove_group_member(
         self, account_id: str, group_id: str, user_id: str
@@ -2916,9 +2920,7 @@ class SyncHTTPClient:
         experience_uri: str,
         options: Optional[ExperienceTrajectoryOptions] = None,
     ) -> Dict[str, Any]:
-        return run_async(
-            self._async_client.list_experience_trajectories(experience_uri, options)
-        )
+        return run_async(self._async_client.list_experience_trajectories(experience_uri, options))
 
     def get_experience_outcomes(
         self,

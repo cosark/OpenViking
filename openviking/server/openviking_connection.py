@@ -9,10 +9,6 @@ from openviking.server.config import get_server_url_from_server_data
 from openviking.server.identity import RequestContext
 
 DEFAULT_AGENT_ID = "web-playground"
-DEFAULT_NAMESPACE_POLICY = {
-    "isolate_user_scope_by_agent": False,
-    "isolate_agent_scope_by_user": False,
-}
 
 
 def attach_openviking_connection(
@@ -45,7 +41,6 @@ def attach_openviking_connection(
         "role": str(ctx.role),
         "api_key_type": "root" if auth_mode == "trusted" else "user",
         "server_url": get_server_url_from_server_data(getattr(request.app.state, "config", None)),
-        "namespace_policy": dict(DEFAULT_NAMESPACE_POLICY),
     }
     if api_key:
         connection["api_key"] = api_key
